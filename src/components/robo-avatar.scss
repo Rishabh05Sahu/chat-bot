@@ -1,0 +1,153 @@
+.futuristicAvatar {
+  width: 240px;
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s ease-in-out;
+
+  &.active {
+    transform: scale(1.05);
+  }
+
+  // Head Section
+  .head {
+    position: relative;
+    width: 220px;
+    height: 260px;
+    border-radius: 50% 50% 45% 45%;
+    background: linear-gradient(135deg, #f0c27b, #ffefba);
+    border: 3px solid #d4a373;
+    box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+
+    .headpiece {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140px;
+      height: 60px;
+      background: linear-gradient(135deg, #d4af37, #f9d342);
+      border-radius: 50% 50% 0 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .face {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding-top: 50px;
+
+      .eyes {
+        display: flex;
+        justify-content: space-around;
+        width: 120px;
+        margin: 0 auto;
+        .eye {
+          width: 20px;
+          height: 20px;
+          background: radial-gradient(circle, #2e2e2e 40%, #1c1c1c 100%);
+          border-radius: 50%;
+          box-shadow: 0 0 5px #1c1c1c;
+          transition: box-shadow 0.3s ease-in-out;
+        }
+      }
+
+      .bindi {
+        position: absolute;
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 10px;
+        height: 10px;
+        background: crimson;
+        border-radius: 50%;
+        box-shadow: 0 0 3px crimson;
+      }
+
+      .mouth {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 8px;
+        background: #e57373;
+        border-radius: 20px;
+        transition: height 0.1s ease-out, background 0.2s ease-in-out;
+
+        &.speaking {
+          background: linear-gradient(to top, #e57373, #ff8a80);
+        }
+      }
+    }
+  }
+
+  // Body Section
+  .body {
+    margin-top: -20px;
+    width: 160px;
+    height: 200px;
+    background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+    border-radius: 15px;
+    border: 3px solid #4caf50;
+    position: relative;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+
+    .upperWear {
+      width: 100%;
+      height: 60%;
+      background: linear-gradient(135deg, #ffcc80, #ffb74d);
+      border-bottom: 2px solid #f57c00;
+      border-radius: 15px 15px 0 0;
+    }
+
+    .arms {
+      display: flex;
+      justify-content: space-between;
+      position: absolute;
+      top: 70px;
+      width: 100%;
+      
+      .arm {
+        width: 30px;
+        height: 90px;
+        background: linear-gradient(135deg, #ffe0b2, #ffcc80);
+        border: 2px solid #fb8c00;
+        border-radius: 10px;
+        transition: transform 0.5s ease-in-out;
+
+        &.left {
+          transform: rotate(-5deg);
+        }
+
+        &.right {
+          transform: rotate(5deg);
+        }
+
+        // Arm Gestures
+        &.wave {
+          animation: waveArm 1s infinite alternate;
+        }
+
+        &.point {
+          transform: rotate(0deg) translateY(-10px);
+        }
+
+        &.idle {
+          transform: scale(0.9);
+          opacity: 0.7;
+        }
+      }
+    }
+  }
+}
+
+@keyframes waveArm {
+  0% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(10deg);
+  }
+}

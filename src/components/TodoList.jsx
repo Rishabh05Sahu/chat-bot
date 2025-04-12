@@ -1,8 +1,7 @@
 // src/components/TodoList.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useLiveAPIContext } from "gemini-multimodal-live-voice-only";
-import { createTodo, getTodos, updateTodo, deleteTodo } from "./api";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 const TodoList = () => {
   const speechActivity = useRef({
@@ -11,13 +10,9 @@ const TodoList = () => {
     isSpeaking: false
   });
   const { connected, client, connect, mute, unmute, muted, volume } = useLiveAPIContext();
-  const [todos, setTodos] = useState([]);
-  const [newTodo, setNewTodo] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
-  const lastSpeakingTime = useRef(Date.now());
-  const isProcessing = useRef(false);
-  const speechTimeout = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [caption, setCaption] = useState(""); // New state for chatbot captions
   const videoRef = useRef(null);
 
   // Updated avatar state with backgrounds
@@ -28,34 +23,69 @@ const TodoList = () => {
       background: '/BackNew1.jpeg' 
     },
     { 
+      name: 'Chef', 
+      path: '/chef.webm',
+      background: '/chefBG.jpeg' 
+    },
+    { 
+      name: 'Lawyer', 
+      path: '/lawyerAvatar.webm',
+      background: '/lawyer.jpg' 
+    },
+    { 
+      name: 'receptionist', 
+      path: '/rec.webm',
+      background: '/recBG.jpeg' 
+    },
+    { 
+      name: 'Santa claus', 
+      path: '/santa.webm',
+      background: '/santaBG.jpeg' 
+    },
+    { 
+      name: 'Mickey Mouse', 
+      path: '/mickeyMouse.webm',
+      background: '/micBG.jpeg' 
+    },
+    { 
+      name: 'Tom and Jerry', 
+      path: '/tom.webm',
+      background: '/tomBG.jpeg' 
+    },
+    { 
       name: 'King', 
       path: '/king.webm',
-      background: '/king-bg.jpg'
+      background: '/BackNew1.jpeg'
     },
     { 
       name: 'Arabic', 
       path: '/arabic.webm',
-      background: '/dubai.jpg' 
+      background: '/dubaiBG.jpeg' 
     },
     { 
       name: 'Arabic 2', 
       path: '/arabicNew.webm',
-      background: '/dubai.jpg' 
+      background: '/dubaiBG.jpg' 
     },
+    // { 
+    //   name: 'Doctor', 
+    //   path: '/doctor2.webm',
+    //   background: '/doctorBG.jpeg' 
+    // },
     { 
-      name: 'Doctor', 
-      path: '/doctor2.webm',
-      background: '/hospital.jpg' 
+      name: 'Doctor ', 
+      path: '/doctor3.webm',
+      background: '/doctorBG.jpeg' 
     },
     { 
       name: 'Doctor 2', 
-      path: '/doctor3.webm',
-      background: '/hospital.jpg' 
+      path: '/realDoctor.webm',
+      background: '/doctorBG.jpeg' 
     },
     { 
       name: 'Police', 
       path: '/police2.webm',
-      background: '/police-bg.jpg' 
+      background: '/BackNew1.jpeg' 
     }
   ]);
 
@@ -83,7 +113,6 @@ const TodoList = () => {
       } catch (error) {
         console.error("Connection error:", error);
         if (isMounted) {
-          // Retry connection after delay with exponential backoff
           retryTimeout = setTimeout(initializeConnection, 5000);
         }
       }
@@ -97,11 +126,6 @@ const TodoList = () => {
     };
   }, [connect, connected]);
 
-  // Fetch todos on mount
-  useEffect(() => {
-    loadTodos();
-  }, []);
-
   // Fetch welcome message
   useEffect(() => {
     fetch(import.meta.env.VITE_SERVER_URL)
@@ -113,19 +137,17 @@ const TodoList = () => {
   // Detect when the chatbot is speaking (volume > threshold)
   useEffect(() => {
     const speakingThreshold = 0.1;
-    const naturalPauseThreshold = 800; // Time between words (ms)
-    const endOfSpeechThreshold = 2000; // Longer threshold for complete stop (2s)
-  
+    const naturalPauseThreshold = 800;
+    const endOfSpeechThreshold = 2000;
+
     const handleSpeechDetection = () => {
       const now = Date.now();
       const { lastActive, timeoutId, isSpeaking } = speechActivity.current;
-  
+
       if (volume > speakingThreshold) {
-        // Speech activity detected
         speechActivity.current.lastActive = now;
         
         if (!isSpeaking) {
-          // Start speaking state
           speechActivity.current.isSpeaking = true;
           setIsSpeaking(true);
           if (videoRef.current.paused || videoRef.current.ended) {
@@ -133,18 +155,15 @@ const TodoList = () => {
             videoRef.current.play().catch(e => console.error("Play error:", e));
           }
         }
-  
-        // Clear any existing timeout
+
         if (timeoutId) {
           clearTimeout(timeoutId);
           speechActivity.current.timeoutId = null;
         }
       } else if (isSpeaking) {
-        // Check if we should end speech
         const silenceDuration = now - lastActive;
         
         if (silenceDuration > naturalPauseThreshold && !timeoutId) {
-          // Set timeout to end speech after full threshold
           speechActivity.current.timeoutId = setTimeout(() => {
             speechActivity.current.isSpeaking = false;
             speechActivity.current.timeoutId = null;
@@ -158,14 +177,13 @@ const TodoList = () => {
         }
       }
     };
-  
-    // Use animation frame for smooth polling
+
     let animationFrameId;
     const checkVolume = () => {
       handleSpeechDetection();
       animationFrameId = requestAnimationFrame(checkVolume);
     };
-  
+
     checkVolume();
     return () => {
       cancelAnimationFrame(animationFrameId);
@@ -174,6 +192,18 @@ const TodoList = () => {
       }
     };
   }, [volume]);
+
+  // Listen for chatbot responses and update caption
+  useEffect(() => {
+    const handleChatResponse = (response) => {
+      if (response.text) {
+        setCaption(response.text);
+      }
+    };
+
+    client.on("response", handleChatResponse);
+    return () => client.off("response", handleChatResponse);
+  }, [client]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -188,92 +218,6 @@ const TodoList = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showAvatarOptions]);
-
-  useEffect(() => {
-    const onToolCall = async (toolCall) => {
-      console.log(toolCall.functionCalls);
-      const responses = await Promise.all(
-        toolCall.functionCalls.map(async (fc) => {
-          switch (fc.name) {
-            case "create_todo":
-              return await handleCreate(fc);
-            case "read_todos":
-              return await handleRead(fc);
-            case "update_todo":
-              return await handleUpdate(fc);
-            case "delete_todo":
-              return await handleDelete(fc);
-            default:
-              return {
-                id: fc.id,
-                response: { output: { error: "Unknown function" } },
-              };
-          }
-        })
-      );
-      client.sendToolResponse({ functionResponses: responses });
-    };
-
-    client.on("toolcall", onToolCall);
-    return () => client.off("toolcall", onToolCall);
-  }, [client]);
-
-  const loadTodos = async () => {
-    try {
-      const data = await getTodos();
-      setTodos(data);
-    } catch (error) {
-      console.error("Error fetching todos:", error);
-    }
-  };
-
-  // CRUD Function Handlers
-  const handleCreate = async (fc) => {
-    try {
-      const data = await createTodo(fc.args.text);
-      setTodos([...todos, data]);
-      return { id: fc.id, response: { output: data } };
-    } catch (error) {
-      return { id: fc.id, response: { output: { error: error.message } } };
-    }
-  };
-
-  const handleRead = async (fc) => {
-    try {
-      const data = await getTodos();
-      setTodos(data);
-      return { id: fc.id, response: { output: data } };
-    } catch (error) {
-      return { id: fc.id, response: { output: { error: error.message } } };
-    }
-  };
-
-  const handleUpdate = async (fc) => {
-    try {
-      const data = await updateTodo(
-        fc.args.id,
-        fc.args.text,
-        fc.args.completed
-      );
-      setTodos(todos.map((todo) => (todo._id === data._id ? data : todo)));
-      return { id: fc.id, response: { output: data } };
-    } catch (error) {
-      return { id: fc.id, response: { output: { error: error.message } } };
-    }
-  };
-
-  const handleDelete = async (fc) => {
-    try {
-      await deleteTodo(fc.args.id);
-      setTodos(todos.filter((todo) => todo._id !== fc.args.id));
-      return {
-        id: fc.id,
-        response: { output: { message: "Deleted successfully" } },
-      };
-    } catch (error) {
-      return { id: fc.id, response: { output: { error: error.message } } };
-    }
-  };
 
   // Update the avatar selection handler
   const handleAvatarSelect = (avatar) => {
@@ -297,9 +241,8 @@ const TodoList = () => {
         transition: 'background-image 0.5s ease-in-out'
       }}
     >
-      {/* Avatar Video Container with Change Avatar Button - Updated Size */}
+      {/* Avatar Video Container */}
       <div className="w-2/5 p-4 flex flex-col items-center justify-center relative">
-        {/* Moved Avatar Selection Button to top-left */}
         <div className="absolute top-0 left-0 z-20 ml-4 mt-4">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -310,7 +253,6 @@ const TodoList = () => {
             Change Avatar
           </motion.button>
           
-          {/* Avatar Options Dropdown */}
           {showAvatarOptions && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -331,7 +273,6 @@ const TodoList = () => {
           )}
         </div>
 
-        {/* Video Container with Animation - Increased Height */}
         <motion.div
           key={avatarChangeKey}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -342,7 +283,7 @@ const TodoList = () => {
           <video
             ref={videoRef}
             src={selectedAvatar.path}
-            className="w-full h-full object-contain opacity-1000"
+            className="w-full h-full object-contain opacity-100"
             style={{
               backgroundColor: 'transparent',
               transition: 'transform 0.2s ease-out',
@@ -361,12 +302,12 @@ const TodoList = () => {
         </motion.div>
       </div>
 
-      {/* Todo List Container with the new background - Increased Width */}
+      {/* Chat Container - Decreased Width */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="bg-gray-900 bg-opacity-50 backdrop-blur-xl p-8 rounded-xl shadow-2xl w-full max-w-2xl"
+        className="bg-gray-900 bg-opacity-50 backdrop-blur-xl p-8 rounded-xl shadow-2xl w-full max-w-md" // Changed max-w-2xl to max-w-md
         style={{
           backgroundImage: "url('/todo3.gif')",
           backgroundSize: 'cover',
@@ -406,90 +347,17 @@ const TodoList = () => {
           <div className="text-white text-center text-green-400">Connecting to Server, Please Wait...!</div>
         )}
 
+        {/* Caption Box */}
         <div className="mt-6">
-          <h2 className="text-2xl font-semibold text-gray-300 text-center mb-4">
-            Todos
-          </h2>
-          <div className="overflow-hidden rounded-xl shadow-lg">
-            <div className="max-h-60 overflow-y-auto">
-              <table className="w-full bg-gray-900 text-gray-200">
-                <thead className="sticky top-0 bg-gray-800">
-                  <tr>
-                    <th className="p-3 border-b border-gray-700">Sr No.</th>
-                    <th className="p-3 border-b border-gray-700">Todo</th>
-                    <th className="p-3 border-b border-gray-700">Completed</th>
-                    <th className="p-3 border-b border-gray-700">Delete</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  <AnimatePresence>
-                    {todos.map((todo, index) => (
-                      <motion.tr
-                        key={todo._id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="hover:bg-gray-700 transition-colors"
-                      >
-                        <td className="p-3 text-center">{index + 1}</td>
-                        <td className="p-3">{todo.text}</td>
-                        <td className="p-3 text-center">
-                          {todo.completed ? "✅" : "🚧"}
-                        </td>
-                        <td className="p-3 text-center">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={async () => {
-                              const confirmed = window.confirm(
-                                `Are you sure you want to delete "${todo.text}"?`
-                              );
-                              if (!confirmed) return;
-                              await deleteTodo(todo._id);
-                              loadTodos();
-                            }}
-                            className="text-red-500 hover:text-red-400 transition-colors cursor-pointer"
-                          >
-                            ❌
-                          </motion.button>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex items-center">
-          <motion.input
-            whileFocus={{
-              scale: 1.05,
-              boxShadow: "0 0 10px rgba(255,255,255,0.2)",
-            }}
-            type="text"
-            className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white placeholder-gray-400 focus:outline-none shadow-md"
-            placeholder="New Todo..."
-            value={newTodo}
-            onChange={(e) => setNewTodo(e.target.value)}
-          />
-          <motion.button
-            whileHover={{
-              scale: 1.1,
-              boxShadow: "0 0 10px rgba(0, 153, 255, 0.5)",
-            }}
-            whileTap={{ scale: 0.95 }}
-            onClick={async () => {
-              await createTodo(newTodo);
-              loadTodos();
-              setNewTodo("");
-            }}
-            className="ml-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-gray-800 bg-opacity-70 rounded-lg p-4 min-h-32 max-h-48 overflow-y-auto"
           >
-            ➕
-          </motion.button>
+            <p className="text-white text-lg">
+              {caption || "Waiting for response..."}
+            </p>
+          </motion.div>
         </div>
       </motion.div>
     </div>

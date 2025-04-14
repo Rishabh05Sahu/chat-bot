@@ -67,6 +67,16 @@ const TodoList = () => {
       path: '/arabicNew.webm',
       background: '/dubaiBG.jpg' 
     },
+    { 
+      name: 'Arabic 3', 
+      path: '/arabMan.webm',
+      background: '/dubaiNew.jpeg' 
+    },
+    { 
+      name: 'Arabic Woman', 
+      path: '/arabWoman.webm',
+      background: '/dubaiNew.jpeg' 
+    },
     // { 
     //   name: 'Doctor', 
     //   path: '/doctor2.webm',
@@ -316,7 +326,7 @@ const TodoList = () => {
         }}
       >
         <h1 className="text-3xl font-extrabold text-gray-100 text-center mb-6">
-          Shivohini ChatBot ✨
+        Shivohini Virtual AI Assistant ✨
         </h1>
 
         <div className="flex items-center justify-center mb-6 gap-1">
